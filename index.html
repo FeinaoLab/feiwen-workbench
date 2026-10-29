@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>飞文工作台</title>
+<style>
+:root{
+  --bg:#f7f4ef; --panel:#fff; --line:#e8e0d4; --txt:#3a3226; --muted:#948a78;
+  --acc:#ff4d6a; --acc2:#d94f8e; --ok:#3fae6a; --warn:#e8a33d; --bad:#e5484d; --info:#4d8bd9;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;background:var(--bg);color:var(--txt);font-size:14px;height:100vh;display:flex;flex-direction:column;overflow:hidden}
+button{font-family:inherit}
+/* 顶栏 */
+#topbar{height:54px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 18px;gap:14px;flex-shrink:0}
+.logo{font-size:17px;font-weight:800}
+.logo b{color:var(--acc)}
+.logo .sub{font-size:11px;color:var(--muted);font-weight:400;margin-left:6px}
+.tabs{display:flex;gap:2px;margin-left:12px;flex:1}
+.tab{padding:8px 16px;border-radius:20px;cursor:pointer;font-size:13px;color:var(--muted);transition:.15s}
+.tab:hover{background:#f5efe6}
+.tab.active{background:var(--acc);color:#fff;font-weight:600}
+/* 主体 */
+#content{flex:1;overflow-y:auto;padding:18px 22px 40px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:16px;box-shadow:0 1px 3px rgba(60,50,30,.05)}
+.card-h{display:flex;align-items:center;padding:13px 18px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px}
+.card-h .more{margin-left:auto;font-weight:400;font-size:12px;color:var(--acc);cursor:pointer}
+.card-b{padding:16px 18px}
+.btn{background:var(--acc);color:#fff;border:none;border-radius:8px;padding:8px 16px;cursor:pointer;font-size:13px;transition:.15s}
+.btn:hover{filter:brightness(1.08)}
+.btn.ghost{background:#fff;border:1px solid var(--line);color:var(--txt)}
+.btn.ghost:hover{border-color:var(--acc);color:var(--acc)}
+.btn.small{padding:4px 10px;font-size:12px;border-radius:6px}
+.btn.info{background:var(--info)}
+input,select,textarea{font-family:inherit;font-size:13px;background:#fbf8f3;border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--txt);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--acc);background:#fff}
+label.fl{display:block;font-size:12px;color:var(--muted);margin:10px 0 5px}
+.empty{text-align:center;color:var(--muted);padding:26px 0;font-size:13px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+@media(max-width:1000px){.grid2,.grid3,.grid4{grid-template-columns:1fr}}
+/* 选题看板 */
+.kanban{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;align-items:start}
+@media(max-width:1200px){.kanban{grid-template-columns:repeat(5,minmax(220px,1fr));overflow-x:auto}}
+.kcol{background:#f1ece2;border-radius:12px;padding:10px;min-height:200px}
+.kcol-h{display:flex;align-items:center;font-size:13px;font-weight:700;padding:2px 6px 10px}
+.kcol-h .cnt{margin-left:auto;background:#fff;border-radius:10px;padding:0 8px;font-size:12px;color:var(--muted)}
+.kitem{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:.15s}
+.kitem:hover{border-color:var(--acc);transform:translateY(-1px)}
+.kitem .t{font-weight:600;font-size:13px;line-height:1.4}
+.kitem .m{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap;align-items:center}
+.kitem .meta{color:var(--muted);font-size:11px;margin-top:6px}
+.tag{display:inline-block;padding:1px 8px;border-radius:9px;font-size:11px}
+.tag.acc{background:#ffe8ec;color:var(--acc)}
+.tag.info{background:#e6f0fb;color:var(--info)}
+.tag.ok{background:#e5f5eb;color:var(--ok)}
+.tag.warn{background:#faf0dc;color:#b97f1d}
+.tag.gray{background:#efeae0;color:var(--muted)}
+.prio-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px}
+.prio-dot.red{background:var(--bad)} .prio-dot.yellow{background:var(--warn)} .prio-dot.green{background:var(--ok)}
+/* 统计卡 */
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+@media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .v{font-size:24px;font-weight:800}
+.kpi .t{color:var(--muted);font-size:12px;margin-top:3px}
+.kpi .v.acc{color:var(--acc)} .kpi .v.ok{color:var(--ok)} .kpi .v.warn{color:var(--warn)}
+/* 弹窗 */
+.modal-mask{position:fixed;inset:0;background:rgba(40,30,20,.45);display:none;align-items:flex-start;justify-content:center;z-index:100;overflow-y:auto;padding:36px 14px}
+.modal-mask.show{display:flex}
+.modal{background:#fff;border-radius:16px;width:620px;max-width:100%;max-height:88vh;overflow-y:auto}
+.modal-h{padding:15px 20px;border-bottom:1px solid var(--line);font-weight:700;display:flex;align-items:center}
+.modal-h .x{margin-left:auto;cursor:pointer;color:var(--muted);font-size:18px}
+.modal-b{padding:18px 20px}
+.modal-f{padding:12px 20px;border-top:1px solid var(--line);display:flex;gap:10px;justify-content:flex-end}
+/* toast */
+#toast{position:fixed;top:64px;left:50%;transform:translateX(-50%);background:#3a3226;color:#fff;border-radius:8px;padding:10px 22px;z-index:200;display:none;font-size:13px}
+/* 罗盘 */
+.compass-btns{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 14px}
+.chip{padding:6px 14px;border-radius:16px;border:1px solid var(--line);background:#fff;cursor:pointer;font-size:12px;color:var(--muted);transition:.15s}
+.chip.on{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+.idea{border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px}
+.idea .txt{flex:1;font-size:13px;line-height:1.5}
+/* 标题工坊 */
+.title-item{display:flex;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;border:1px solid var(--line);margin-bottom:7px;font-size:13px}
+.title-item:hover{border-color:var(--acc)}
+.score-bar{height:6px;border-radius:3px;background:#f0e9dd;overflow:hidden;flex:1}
+.score-bar i{display:block;height:100%;border-radius:3px}
+/* 封面预览 */
+.cover{width:280px;height:375px;border-radius:14px;padding:26px 22px;display:flex;flex-direction:column;position:relative;overflow:hidden;flex-shrink:0}
+.cover .emoji{font-size:44px;margin-bottom:14px}
+.cover .headline{font-size:25px;font-weight:900;line-height:1.35;letter-spacing:.5px}
+.cover .sub{font-size:13px;margin-top:12px;opacity:.85;line-height:1.6}
+.cover .foot{margin-top:auto;font-size:11px;opacity:.75;display:flex;justify-content:space-between}
+.cover-tpl{padding:6px 10px;border-radius:8px;border:1px solid var(--line);cursor:pointer;font-size:12px;background:#fff}
+.cover-tpl.on{border-color:var(--acc);color:var(--acc);font-weight:700}
+/* 复盘表 */
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;color:var(--muted);font-weight:600;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 10px;border-bottom:1px solid #f0e9dd}
+tr:hover td{background:#fdf9f2}
+.num{font-variant-numeric:tabular-nums}
+a.link{color:var(--acc);cursor:pointer;text-decoration:none}
+a.link:hover{text-decoration:underline}
+.bar-cell{display:flex;align-items:center;gap:8px}
+.bar-cell .bar{height:8px;border-radius:4px;background:#f0e9dd;flex:1;overflow:hidden}
+.bar-cell .bar i{display:block;height:100%;background:var(--acc);border-radius:4px}
+/* 日历 */
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
+.cal .day{background:#fbf8f3;border:1px solid var(--line);border-radius:10px;min-height:92px;padding:8px;font-size:12px}
+.cal .day .d{color:var(--muted);font-size:11px;margin-bottom:5px}
+.cal .day.today{border-color:var(--acc);background:#fff5f6}
+.cal .ev{border-radius:6px;padding:2px 6px;margin-bottom:4px;font-size:11px;background:#ffe8ec;color:var(--acc2);cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* 检查面板 */
+.chk{display:flex;gap:8px;align-items:flex-start;padding:8px 10px;border-radius:8px;margin-bottom:6px;font-size:13px}
+.chk.ok{background:#e5f5eb;color:#2c7a4d}
+.chk.warn{background:#faf0dc;color:#9a6d13}
+.chk.bad{background:#fdecec;color:#b03032}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:#ddd2bf;border-radius:5px}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">✍️ 飞文<b>工作台</b><span class="sub">一个人，跑完一支内容团队</span></div>
+  <div class="tabs" id="tabs"></div>
+  <button class="btn" onclick="newIdea()">＋ 添加选题</button>
+  <button class="btn ghost" onclick="openData()">💾 数据</button>
+</div>
+
+<div id="content"></div>
+
+<div class="modal-mask" id="modalMask" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-h"><span id="modalTitle"></span><span class="x" onclick="closeModal()">✕</span></div>
+    <div class="modal-b" id="modalBody"></div>
+    <div class="modal-f" id="modalFoot"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+/* =====================================================================
+   飞文工作台 v1.0
+   参照「1024造物挑战」项目8《图文自媒体全栈运营工作台》(Ray / 选题罗盘)：
+   1. 一条龙信息架构 —— 选题 → 写作 → 封面 → 发布 → 复盘，单页全流程
+   2. 纯前端零依赖 —— 单 HTML 文件，打开即用，localStorage 持久化
+   3. 把"不知道发什么"变成"今天发这条" —— 罗盘生成 + 日历排期
+===================================================================== */
+
+/* ---------------- 数据层 ---------------- */
+const LS='feiwen_v1';
+let DB = load();
+function load(){ try{
+  let d = localStorage.getItem(LS);
+  if(!d){ const old = localStorage.getItem('feilong_v1'); if(old){ localStorage.setItem(LS, old); d=old; } }
+  return d? JSON.parse(d) : {};
+}catch(e){return {}} }
+function save(){ localStorage.setItem(LS, JSON.stringify(DB)); }
+
+const STAGES = [
+  {k:'idea',    n:'💡 灵感池',  hint:'先记下来再说'},
+  {k:'todo',    n:'📋 待写',    hint:'排进本周'},
+  {k:'writing', n:'✏️ 写作中',  hint:'标题正文打磨中'},
+  {k:'ready',   n:'🚀 待发布',  hint:'封面配图就绪'},
+  {k:'done',    n:'✅ 已发布',  hint:'进入数据复盘'},
+];
+const NICHES = ['职场成长','育儿家庭','家居收纳','美食探店','穿搭变美','数码好物','健康运动','读书学习'];
+const ANGLES = ['避坑清单','真实测评','保姆级教程','翻车反思','省钱攻略','新手入门','效率工具','情绪共鸣'];
+const CROWDS = ['职场新人','宝妈宝爸','大学生','租房党','打工人','小镇青年','中产家庭'];
+const PAINS = ['不知道怎么开始','花冤枉钱','走弯路浪费时间','选择困难','坚持不下来','怕被割韭菜'];
+const HOOKS = ['数字承诺','悬念反差','身份代入','痛点直击','对比冲突','保姆承诺'];
+const TITLE_FORMULAS = [
+  {n:'数字承诺', f:'{n}个{kw}，{c}再也不{p}', ex:'5个收纳技巧，租房党再也不怕搬家'},
+  {n:'悬念反差', f:'我{kw}了1年，才发现{c}一直都{p}', ex:'我健身了1年，才发现一直都练错了'},
+  {n:'身份代入', f:'{c}必看：{kw}从0到1的{p}指南', ex:'职场新人必看：汇报从0到1的避坑指南'},
+  {n:'痛点直击', f:'为什么你{kw}总是失败？{p}这一步就错了', ex:'为什么你存钱总是失败？第一步就错了'},
+  {n:'保姆承诺', f:'保姆级{kw}教程：{p}一次讲清楚', ex:'保姆级装修教程：全屋预算一次讲清楚'},
+  {n:'对比冲突', f:'{kw}的大坑 vs 正确做法，{c}别再{p}', ex:'防晒的大坑 vs 正确做法，别再白涂'},
+];
+const HOT_CAL = [
+  {m:1, d:1,  n:'元旦flag季'},{m:3, d:8,  n:'女神节'},{m:4, d:23, n:'世界读书日'},
+  {m:5, d:1,  n:'五一出行'},{m:6, d:1,  n:'儿童节'},{m:6, d:18, n:'618大促'},
+  {m:9, d:1,  n:'开学季'},{m:10, d:1, n:'国庆长假'},{m:11, d:11, n:'双11'},
+  {m:12, d:25, n:'圣诞跨年'},{m:12, d:31, n:'年度总结'},
+];
+const COVER_TPLS = [
+  {n:'珊瑚粉',  bg:'linear-gradient(160deg,#ff8a9e,#ff4d6a)', fg:'#fff'},
+  {n:'奶油黄',  bg:'linear-gradient(160deg,#ffe8b0,#f6b352)', fg:'#5a3d00'},
+  {n:'薄荷绿',  bg:'linear-gradient(160deg,#a8e6c9,#3fae6a)', fg:'#fff'},
+  {n:'雾霾蓝',  bg:'linear-gradient(160deg,#a8c8ec,#4d8bd9)', fg:'#fff'},
+  {n:'深色高级',bg:'linear-gradient(160deg,#3a3226,#151210)', fg:'#f7e9c8'},
+  {n:'丁香紫',  bg:'linear-gradient(160deg,#d9c2ec,#9a6dc4)', fg:'#fff'},
+];
+
+/* ---------------- 弹窗 / toast ---------------- */
+function openModal(title, body, onOk, okText){
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  const f = document.getElementById('modalFoot');
+  f.innerHTML = onOk ? `<button class="btn ghost" onclick="closeModal()">取消</button><button class="btn" id="mOk">${okText||'保 存'}</button>` : `<button class="btn" onclick="closeModal()">关 闭</button>`;
+  if(onOk) document.getElementById('mOk').onclick = onOk;
+  document.getElementById('modalMask').classList.add('show');
+}
+function closeModal(){ document.getElementById('modalMask').classList.remove('show'); }
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.style.display='block';
+  clearTimeout(t._t); t._t=setTimeout(()=>t.style.display='none',1800); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+
+/* ---------------- 选题数据模型 ---------------- */
+function newTopicObj(o){ return Object.assign({
+  id:'t'+Date.now()+Math.floor(Math.random()*999), title:'', niche:'', crowd:'', pain:'', stage:'idea',
+  priority:'green', angle:'', notes:'', draft:'', tags:[], publishDate:'', platform:'小红书',
+  stats:null, coverTpl:0, coverEmoji:'✨', coverSub:'', createdAt:Date.now(), updatedAt:Date.now(),
+}, o||{}); }
+function topics(stage){ return (DB.topics||[]).filter(t=>!stage||t.stage===stage); }
+function topicById(id){ return (DB.topics||[]).find(t=>t.id===id); }
+function updTopic(id, patch){ const t=topicById(id); if(!t) return; Object.assign(t, patch, {updatedAt:Date.now()}); save(); }
+
+/* ---------------- 导航 ---------------- */
+const PAGES = [
+  {k:'kanban',  n:'📋 选题看板'},
+  {k:'compass', n:'🧭 选题罗盘'},
+  {k:'studio',  n:'✏️ 写作工坊'},
+  {k:'cover',   n:'🎨 封面工场'},
+  {k:'review',  n:'📊 数据复盘'},
+  {k:'calendar',n:'🗓️ 内容日历'},
+];
+let CUR='kanban';
+function renderTabs(){
+  document.getElementById('tabs').innerHTML = PAGES.map(p=>
+    `<div class="tab ${CUR===p.k?'active':''}" onclick="go('${p.k}')">${p.n}</div>`).join('');
+}
+function go(k){ CUR=k; renderTabs(); render(); document.getElementById('content').scrollTop=0; }
+function render(){
+  document.getElementById('content').innerHTML = ({kanban:vKanban, compass:vCompass, studio:vStudio, cover:vCover, review:vReview, calendar:vCalendar})[CUR]();
+}
+
+/* ============ 1. 选题看板 ============ */
+function vKanban(){
+  const all = DB.topics||[];
+  const done = topics('done');
+  const avgInter = (()=>{ const ds=done.filter(t=>t.stats&&t.stats.views>0);
+    return ds.length? Math.round(ds.reduce((s,t)=>s+(t.stats.likes+t.stats.favs+t.stats.comments)/t.stats.views*100,0)/ds.length*10)/10 : '—'; })();
+  const week = all.filter(t=>{ const p=t.publishDate; if(!p) return false;
+    const d=(new Date(p)-new Date(todayStr()))/86400000; return d>=0&&d<=7; }).length;
+  const red = all.filter(t=>prioOf(t).level==='red').length;
+  const kpis = `<div class="kpis">
+    <div class="kpi"><div class="v">${all.length}</div><div class="t">选题总量（灵感池 ${topics('idea').length}）</div></div>
+    <div class="kpi"><div class="v acc">${topics('writing').length+topics('ready').length}</div><div class="t">进行中（写作+待发布）</div></div>
+    <div class="kpi"><div class="v ${red?'warn':'ok'}">${red}</div><div class="t">🔴 临期未发（3 天内到期/逾期）</div></div>
+    <div class="kpi"><div class="v ok">${avgInter}</div><div class="t">平均互动率 %（已发布）</div></div>
+  </div>`;
+  const cols = STAGES.map(st=>{
+    const list = topics(st.k);
+    return `<div class="kcol"><div class="kcol-h">${st.n}<span class="cnt">${list.length}</span></div>
+      ${st.k==='idea'?`<div class="kitem" style="border-style:dashed;color:var(--muted);text-align:center" onclick="newIdea()">＋ 记一个灵感</div>`:''}
+      ${list.map(kItem).join('')||'<div class="empty" style="padding:14px 0;font-size:12px">'+st.hint+'</div>'}
+    </div>`;
+  }).join('');
+  const upcoming = all.filter(t=>t.publishDate&&t.stage!=='done'&&new Date(t.publishDate)>=new Date(todayStr()))
+    .sort((a,b)=>a.publishDate.localeCompare(b.publishDate)).slice(0,5);
+  const right = `<div class="card"><div class="card-h">🔥 最近要发</div><div class="card-b">
+    ${upcoming.length? upcoming.map(t=>`<div class="idea" onclick="editTopic('${t.id}')">
+      <span class="prio-dot ${prioOf(t).level}"></span><span class="txt"><b>${esc(t.title||'(未命名)')}</b><br>
+      <span style="color:var(--muted);font-size:12px">${t.publishDate} · ${esc(t.platform)}</span></span></div>`).join('')
+    : '<div class="empty">7 日内没有排期，去日历排一条吧</div>'}</div></div>
+    <div class="card"><div class="card-h">📈 赛道表现</div><div class="card-b">
+    ${nicheRank()}</div></div>`;
+  return kpis + `<div class="card"><div class="card-h">选题全流程：点卡片编辑，按钮推进阶段</div>
+    <div class="card-b"><div class="kanban">${cols}</div></div></div>
+    <div class="grid2" style="align-items:start">${right}<div></div></div>`;
+}
+function kItem(t){
+  const p = prioOf(t);
+  return `<div class="kitem" onclick="editTopic('${t.id}')">
+    <div class="t">${esc(t.title)||'<span style="color:var(--muted)">(未命名灵感)</span>'}</div>
+    <div class="m">
+      ${t.niche?`<span class="tag info">${esc(t.niche)}</span>`:''}
+      ${t.angle?`<span class="tag acc">${esc(t.angle)}</span>`:''}
+      <span style="margin-left:auto"><span class="prio-dot ${p.level}"></span></span>
+    </div>
+    ${t.publishDate?`<div class="meta">📅 ${t.publishDate}${t.stats&&t.stats.views?` · 👀${t.stats.views} 👍${t.stats.likes}`:''}</div>`:''}
+  </div>`;
+}
+function prioOf(t){
+  if(t.stage==='done') return {level:'green'};
+  if(!t.publishDate) return {level:'green'};
+  const diff = Math.floor((new Date(t.publishDate)-new Date(todayStr()))/86400000);
+  if(diff<0) return {level:'red'};
+  if(diff<=2) return {level:'red'};
+  if(diff<=5) return {level:'yellow'};
+  return {level:'green'};
+}
+function nicheRank(){
+  const m = {};
+  (DB.topics||[]).filter(t=>t.stats&&t.stats.views>0&&t.niche).forEach(t=>{
+    const r = (t.stats.likes+t.stats.favs+t.stats.comments)/t.stats.views*100;
+    (m[t.niche]=m[t.niche]||[]).push(r);
+  });
+  const rows = Object.entries(m).map(([k,v])=>({k, avg:v.reduce((a,b)=>a+b,0)/v.length, n:v.length}))
+    .sort((a,b)=>b.avg-a.avg);
+  const max = rows.length? rows[0].avg : 1;
+  return rows.length? rows.map(r=>`<div class="bar-cell" style="margin-bottom:8px">
+      <span style="width:76px;font-size:12px">${esc(r.k)}</span>
+      <div class="bar"><i style="width:${Math.max(6,r.avg/max*100)}%"></i></div>
+      <span class="num" style="width:56px;text-align:right;font-size:12px;color:${r.avg>=3?'var(--ok)':'var(--muted)'}">${r.avg.toFixed(1)}%</span></div>`).join('')
+    : '<div class="empty">发布并录入数据后生成</div>';
+}
+function newIdea(){
+  openModal('💡 记一个灵感', `
+    <label class="fl">想法一句话（支持模糊，比如"收纳那点事"）</label>
+    <input id="niTitle" style="width:100%" placeholder="先记下来，回头再打磨">
+    <div class="grid2">
+      <div><label class="fl">赛道</label><select id="niNiche"><option value="">(以后再定)</option>${NICHES.map(n=>`<option>${n}</option>`).join('')}</select></div>
+      <div><label class="fl">目标人群</label><select id="niCrowd"><option value="">(以后再定)</option>${CROWDS.map(n=>`<option>${n}</option>`).join('')}</select></div>
+    </div>`,
+    ()=>{ const t=newTopicObj({title:document.getElementById('niTitle').value.trim(),
+        niche:document.getElementById('niNiche').value, crowd:document.getElementById('niCrowd').value});
+      if(!t.title) return toast('先写一句想法');
+      (DB.topics=DB.topics||[]).unshift(t); save(); closeModal(); toast('已进灵感池'); go('kanban'); }, '进灵感池');
+}
+function editTopic(id){
+  const t = topicById(id); if(!t) return;
+  const stageOpts = STAGES.map(s=>`<option value="${s.k}" ${t.stage===s.k?'selected':''}>${s.n}</option>`).join('');
+  const body = `
+    <label class="fl">标题</label><input id="etTitle" style="width:100%" value="${esc(t.title)}" placeholder="去写作工坊打磨更省力">
+    <div class="grid3">
+      <div><label class="fl">赛道</label><select id="etNiche">${NICHES.map(n=>`<option ${t.niche===n?'selected':''}>${n}</option>`).join('')}</select></div>
+      <div><label class="fl">人群</label><select id="etCrowd">${CROWDS.map(n=>`<option ${t.crowd===n?'selected':''}>${n}</option>`).join('')}</select></div>
+      <div><label class="fl">角度</label><select id="etAngle"><option value="">(未定)</option>${ANGLES.map(n=>`<option ${t.angle===n?'selected':''}>${n}</option>`).join('')}</select></div>
+    </div>
+    <div class="grid3">
+      <div><label class="fl">阶段</label><select id="etStage">${stageOpts}</select></div>
+      <div><label class="fl">计划发布日</label><input id="etPub" type="date" value="${t.publishDate||''}"></div>
+      <div><label class="fl">平台</label><input id="etPlat" value="${esc(t.platform)}"></div>
+    </div>
+    <label class="fl">选题备注（痛点/素材链接/灵感来源）</label>
+    <textarea id="etNotes" rows="2" style="width:100%">${esc(t.notes||'')}</textarea>`;
+  openModal('编辑选题', body, ()=>{
+    updTopic(id, { title:document.getElementById('etTitle').value.trim(),
+      niche:document.getElementById('etNiche').value, crowd:document.getElementById('etCrowd').value,
+      angle:document.getElementById('etAngle').value, stage:document.getElementById('etStage').value,
+      publishDate:document.getElementById('etPub').value, platform:document.getElementById('etPlat').value.trim(),
+      notes:document.getElementById('etNotes').value });
+    closeModal(); toast('已保存'); render();
+  }, '保存');
+  const f = document.getElementById('modalFoot');
+  const del = document.createElement('button'); del.className='btn ghost'; del.style.marginRight='auto'; del.style.color='var(--bad)'; del.style.borderColor='var(--bad)'; del.textContent='删除';
+  del.onclick = ()=>{ if(confirm('删除这条选题？')){ DB.topics = DB.topics.filter(x=>x.id!==id); save(); closeModal(); render(); toast('已删除'); } };
+  f.prepend(del);
+}
+function advance(id){
+  const t = topicById(id); if(!t) return;
+  const i = STAGES.findIndex(s=>s.k===t.stage);
+  if(i<STAGES.length-1){ updTopic(id,{stage:STAGES[i+1].k});
+    if(STAGES[i+1].k==='done' && !t.stats) openStatsModal(id); }
+  render();
+}
+
+/* ============ 2. 选题罗盘 ============ */
+let CP = {niche:'', crowd:'', pain:'', hook:''};
+function vCompass(){
+  const chip=(grp,arr)=>`<div class="compass-btns">${arr.map(x=>
+    `<span class="chip ${CP[grp]===x?'on':''}" onclick="CP['${grp}']=['${grp}']==='hook'?'':'${x}';CP['${grp}']='${x}';render()">${x}</span>`).join('')}</div>`;
+  const ideas = genIdeas();
+  return `<div class="card"><div class="card-h">🧭 选题罗盘 <span style="margin-left:8px;font-weight:400;font-size:12px;color:var(--muted)">赛道 × 人群 × 痛点 × 钩子，四步转动出选题</span></div><div class="card-b">
+    <label class="fl">① 我的赛道</label>${chip('niche',NICHES)}
+    <label class="fl">② 发给谁</label>${chip('crowd',CROWDS)}
+    <label class="fl">③ 他们怕什么</label>${chip('pain',PAINS)}
+    <label class="fl">④ 用什么钩子</label>${chip('hook',HOOKS)}
+    <div style="margin:10px 0 4px;display:flex;gap:10px;align-items:center">
+      <button class="btn" onclick="render()">🎲 转动罗盘（生成 8 条）</button>
+      <span style="color:var(--muted);font-size:12px">选得越全，选题越准；也可以只选两项自由组合</span>
+    </div></div></div>
+  <div class="card"><div class="card-h">✨ 罗盘结果 <span class="more" onclick="saveAllIdeas()">全部存入灵感池 »</span></div><div class="card-b">
+    ${ideas.map((x,i)=>`<div class="idea"><span class="tag acc">${x.formula}</span>
+      <span class="txt">${esc(x.title)}</span>
+      <button class="btn ghost small" onclick="saveIdea(${i})">存入灵感池</button></div>`).join('')}
+  </div></div>
+  <div class="card"><div class="card-h">📅 全年热点日历 <span style="margin-left:8px;font-weight:400;font-size:12px;color:var(--muted)">借势选题提前 2 周准备</span></div><div class="card-b" style="display:flex;flex-wrap:wrap;gap:8px">
+    ${HOT_CAL.map(h=>`<span class="tag ${h.m===new Date().getMonth()+1?'acc':'gray'}">${h.m}/${h.d} ${h.n}</span>`).join('')}
+  </div></div>`;
+}
+function genIdeas(){
+  const out=[]; const used=new Set();
+  const niches = CP.niche?[CP.niche]:NICHES, crowds = CP.crowd?[CP.crowd]:CROWDS, pains = CP.pain?[CP.pain]:PAINS;
+  for(let i=0;i<40&&out.length<8;i++){
+    const f = TITLE_FORMULAS[Math.floor(Math.random()*TITLE_FORMULAS.length)];
+    const kw = niches[Math.floor(Math.random()*niches.length)];
+    const c = crowds[Math.floor(Math.random()*crowds.length)];
+    const p = pains[Math.floor(Math.random()*pains.length)];
+    const n = 3+Math.floor(Math.random()*8);
+    const title = f.f.replace('{kw}',kw).replace('{c}',c).replace('{p}',p).replace('{n}',n);
+    if(used.has(title)) continue; used.add(title);
+    out.push({title, formula:f.n, niche:CP.niche||kw, crowd:c, pain:p});
+  }
+  window._ideas = out; return out;
+}
+function saveIdea(i){
+  const x = window._ideas[i]; if(!x) return;
+  (DB.topics=DB.topics||[]).unshift(newTopicObj({title:x.title, niche:x.niche, crowd:x.crowd, pain:x.pain, notes:'罗盘生成'}));
+  save(); toast('已存入灵感池 ✅');
+}
+function saveAllIdeas(){ (window._ideas||[]).forEach(x=>{ (DB.topics=DB.topics||[]).unshift(
+  newTopicObj({title:x.title, niche:x.niche, crowd:x.crowd, pain:x.pain, notes:'罗盘生成'})); });
+  save(); toast((window._ideas||[]).length+' 条已全部存入灵感池'); }
+
+/* ============ 3. 写作工坊 ============ */
+let W_TOPIC = null;
+function vStudio(){
+  const pool = (DB.topics||[]).filter(t=>['todo','writing'].includes(t.stage));
+  const t = W_TOPIC ? topicById(W_TOPIC) : pool[0];
+  const draft = t ? (t.draft||'') : '';
+  const checks = draft? draftChecks(draft) : [];
+  return `<div class="grid2" style="grid-template-columns:280px 1fr;align-items:start">
+    <div class="card"><div class="card-h">📚 待写选题</div><div class="card-b" style="padding:10px">
+      ${pool.length? pool.map(x=>`<div class="idea" style="${t&&x.id===t.id?'border-color:var(--acc);background:#fff5f6':''}" onclick="W_TOPIC='${x.id}';render()">
+        <span class="txt"><b>${esc(x.title)||'(未命名)'}</b><br><span style="font-size:11px;color:var(--muted)">${esc(x.niche)} · ${esc(x.angle||'角度未定')}</span></span></div>`).join('')
+      : '<div class="empty">待写池是空的，先去罗盘转几个选题</div>'}
+    </div></div>
+    <div>
+      ${!t? '<div class="card"><div class="card-b"><div class="empty">← 选一个待写选题，或先去「选题看板」加一条</div></div></div>' : `
+      <div class="card"><div class="card-h">🏷️ 标题工坊 <span style="margin-left:8px;font-weight:400;font-size:12px;color:var(--muted)">目标：${t.platform} · 20 字内最佳</span></div><div class="card-b">
+        ${TITLE_FORMULAS.map(f=>{
+          const kw = t.niche||'这个领域', c = t.crowd||'新手', p = t.pain? t.pain.slice(0,6):'走弯路';
+          const sample = f.f.replace('{kw}',kw).replace('{c}',c).replace('{p}',p).replace('{n}',5);
+          return `<div class="title-item"><span class="tag gray">${f.n}</span>
+            <span style="flex:1" class="link" onclick="applyTitle('${esc(sample).replace(/'/g,"\\'")}')">${esc(sample)}</span>
+            <span style="width:90px"><span class="score-bar"><i style="width:${scoreTitle(sample)}%;background:${scoreTitle(sample)>=80?'var(--ok)':scoreTitle(sample)>=60?'var(--warn)':'var(--bad)'}"></i></span></span>
+            <span class="num" style="font-size:11px;color:var(--muted)">${sample.length}字</span></div>`;
+        }).join('')}
+        <label class="fl">我的标题（点击上方公式直接套用，可改）</label>
+        <input id="wsTitle" style="width:100%;font-size:15px;font-weight:700" value="${esc(t.title)}" oninput="draftSave('title',this.value)">
+        <div style="margin-top:6px;font-size:12px;color:${(t.title||'').length>20?'var(--bad)':'var(--muted)'}">
+          当前 ${(t.title||'').length} 字 ${t.title.length>20?'· 超过 20 字，信息流里会被截断 ⚠️':'· 长度合适 ✓'}</div>
+      </div></div>
+      <div class="card"><div class="card-h">✏️ 正文写作</div><div class="card-b">
+        <textarea id="wsDraft" rows="12" style="width:100%;line-height:1.8" placeholder="开头第一句必须是钩子：反常识 / 痛点 / 结果前置…&#10;&#10;正文建议 3-5 段，每段一个信息点，多用短句和小标题…" oninput="draftSave('draft',this.value)">${esc(draft)}</textarea>
+        <div style="margin-top:8px;display:flex;gap:10px;align-items:center">
+          <span style="font-size:12px;color:var(--muted)">正文 ${draft.length} 字 · 预计阅读 ${Math.max(1,Math.round(draft.length/300))} 分钟</span>
+          <button class="btn ghost small" onclick="addEmojiFmt()">🎀 一键小红书排版</button>
+        </div>
+        <div style="margin-top:12px">
+          ${checks.map(c=>`<div class="chk ${c.level}"><span>${c.icon}</span><span>${c.msg}</span></div>`).join('')}
+        </div>
+      </div></div>
+      <div class="card"><div class="card-h">#️⃣ 标签推荐</div><div class="card-b">
+        ${t.tags&&t.tags.length? t.tags.map(x=>`<span class="tag info" style="margin-right:6px">#${esc(x)}</span>`).join(''):'<span class="empty" style="padding:6px 0">填写标题/正文后自动推荐</span>'}
+        <div style="margin-top:10px"><button class="btn ghost small" onclick="genTags()">🔄 重新推荐</button>
+        <button class="btn small" style="margin-left:8px" onclick="go('cover')">下一步：做封面 →</button></div>
+      </div></div>`}
+    </div>
+  </div>`;
+}
+function scoreTitle(s){
+  let sc=50;
+  if(/\d/.test(s)) sc+=15;                       // 有数字
+  if(s.length<=20&&s.length>=10) sc+=15;         // 长度
+  if(/[!?？!]|竟然|原来|千万别|后悔|秘密/.test(s)) sc+=10; // 情绪
+  if(/[（(].+[)）]|｜|\|/.test(s)) sc+=10;        // 结构化
+  return Math.min(99,sc);
+}
+function draftChecks(d){
+  const out=[];
+  const first = d.split('\n').map(x=>x.trim()).find(Boolean)||'';
+  out.push(first.length? (/^\d|原来|其实|千万别|我|你|为什么|真相|秘密/.test(first)? {level:'ok',icon:'✅',msg:'开头有钩子（数字/悬念/人称）'} : {level:'warn',icon:'⚠️',msg:'开头比较平，试试"结果前置"或反常识开场'}) : {level:'bad',icon:'🚫',msg:'正文还是空的'});
+  if(d.length<200) out.push({level:'warn',icon:'⚠️',msg:'正文偏短（<200 字），干货不足难涨粉'});
+  if(d.length>1200) out.push({level:'warn',icon:'⚠️',msg:'正文偏长（>1200 字），完读率会掉'});
+  if(!/[✅🌟💡📌🔥❗️]/.test(d)) out.push({level:'warn',icon:'💡',msg:'建议加 emoji 小符号提升可读性（点上方一键排版）'});
+  else out.push({level:'ok',icon:'✅',msg:'已有 emoji 点缀，阅读友好'});
+  const paras = d.split('\n').filter(x=>x.trim()).length;
+  if(paras>=3) out.push({level:'ok',icon:'✅',msg:`${paras} 个自然段，结构清晰`});
+  else out.push({level:'warn',icon:'⚠️',msg:'分段少于 3 段，建议拆短段'});
+  return out;
+}
+function addEmojiFmt(){
+  const t = topicById(W_TOPIC); if(!t||!t.draft) return toast('先写点正文');
+  const marks=['✅','🌟','💡','📌','🔥'];
+  let i=0;
+  t.draft = t.draft.split('\n').map(l=>{ l=l.trim(); if(!l) return l;
+    if(/^[✅🌟💡📌🔥❗️❌]/.test(l)) return l;
+    if(/^[一二三四五六七八九十]、|^\d+[\.、]/.test(l)) return marks[i++%marks.length]+' '+l.replace(/^[一二三四五六七八九十]、|^\d+[\.、]/,'');
+    return l; }).join('\n\n');
+  save(); render(); toast('已按小红书风格分段加符号');
+}
+function genTags(){
+  const t = topicById(W_TOPIC); if(!t) return;
+  const s = (t.title||'')+' '+(t.draft||'').slice(0,400);
+  const cand = new Set();
+  NICHES.forEach(n=>{ if(s.includes(n.slice(0,2))||t.niche===n) cand.add(n); });
+  CROWDS.forEach(n=>{ if(s.includes(n)||t.crowd===n) cand.add(n); });
+  ANGLES.forEach(n=>{ if(s.includes(n.slice(0,2))||t.angle===n) cand.add(n); });
+  cand.add('干货分享'); cand.add('经验分享'); cand.add('避坑');
+  t.tags=[...cand].slice(0,8); save(); render(); toast('已推荐 '+t.tags.length+' 个标签');
+}
+function draftSave(k,v){ const t=topicById(W_TOPIC); if(!t) return; t[k]=v; t.updatedAt=Date.now(); save(); }
+function applyTitle(sample){ const t=topicById(W_TOPIC); if(!t) return; t.title=sample; save(); render(); toast('标题已套用，记得改成自己的话'); }
+let _wsTimer=null;
+document.addEventListener('input',e=>{
+  if(e.target.id==='wsDraft'||e.target.id==='wsTitle'){
+    clearTimeout(_wsTimer); _wsTimer=setTimeout(()=>{ if(CUR==='studio') render(); },1200); }
+});
+
+/* ============ 4. 封面工场 ============ */
+function vCover(){
+  const pool = (DB.topics||[]).filter(t=>['writing','ready'].includes(t.stage));
+  const t = W_TOPIC ? topicById(W_TOPIC) : pool[0];
+  const tpl = COVER_TPLS[t? t.coverTpl:0];
+  return `<div class="grid2" style="grid-template-columns:300px 1fr;align-items:start">
+    <div class="card"><div class="card-h">🖼️ 实时预览（3:4）</div><div class="card-b" style="display:flex;justify-content:center">
+      ${t? `<div class="cover" style="background:${tpl.bg};color:${tpl.fg}">
+        <div class="emoji">${esc(t.coverEmoji)}</div>
+        <div class="headline">${esc((t.title||'你的标题').slice(0,26))}</div>
+        <div class="sub">${esc(t.coverSub||'副标题：一条让观众点进来的理由')}</div>
+        <div class="foot"><span>@飞文创作者</span><span>左右滑动看更多 →</span></div>
+      </div>` : '<div class="empty">选一个写作中/待发布的选题</div>'}
+    </div></div>
+    <div>
+      ${!t? '<div class="card"><div class="card-b"><div class="empty">← 从左侧或看板选一个选题</div></div></div>' : `
+      <div class="card"><div class="card-h">🎨 模板配色</div><div class="card-b">
+        <div class="compass-btns">${COVER_TPLS.map((c,i)=>`<span class="cover-tpl ${t.coverTpl===i?'on':''}" onclick="updTopic('${t.id}',{coverTpl:${i}});render()">${c.n}</span>`).join('')}</div>
+        <label class="fl">封面大 emoji</label>
+        <div class="compass-btns">${['✨','🔥','💰','🏠','🍜','👗','📚','💪','🧠','⚠️','🎯','✅'].map(e=>
+          `<span class="cover-tpl ${t.coverEmoji===e?'on':''}" style="font-size:16px" onclick="updTopic('${t.id}',{coverEmoji:'${e}'});render()">${e}</span>`).join('')}</div>
+        <label class="fl">副标题（封面上第二行）</label>
+        <input style="width:100%" value="${esc(t.coverSub||'')}" placeholder="例：亲测有效，直接抄作业" oninput="updTopic('${t.id}',{coverSub:this.value})">
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn" onclick="copyCover('${t.id}')">📋 复制发布文案包（标题+正文+标签）</button>
+          <button class="btn ghost" onclick="markReady('${t.id}')">✅ 封面就绪，转待发布</button>
+        </div>
+      </div></div>
+      <div class="card"><div class="card-h">📌 发布小抄</div><div class="card-b" style="font-size:13px;line-height:2;color:var(--muted)">
+        · 标题放第一行，封面字别超过 2 行<br>· 发布时间：工作日 12:00 / 18:00-19:00，周末 10:00<br>
+        · 话题标签 5-8 个：1 个大流量 + 3 个垂类 + 2 个长尾<br>· 发布后 1 小时内回评论，权重更高
+      </div></div>`}
+    </div>
+  </div>`;
+}
+function markReady(id){ updTopic(id,{stage:'ready'}); toast('已转入待发布 🚀'); render(); }
+function copyCover(id){
+  const t = topicById(id);
+  const text = [t.title, '', t.draft||'', '', t.tags.map(x=>'#'+x).join(' ')].join('\n');
+  (navigator.clipboard? navigator.clipboard.writeText(text): Promise.reject()).then(()=>toast('文案包已复制 ✅')).catch(()=>{
+    const ta=document.createElement('textarea'); ta.value=text; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); ta.remove(); toast('文案包已复制 ✅'); });
+}
+
+/* ============ 5. 数据复盘 ============ */
+function vReview(){
+  const done = topics('done');
+  const withData = done.filter(t=>t.stats);
+  const sum = k => withData.reduce((s,t)=>s+(t.stats[k]||0),0);
+  const views=sum('views'), likes=sum('likes'), favs=sum('favs'), cmts=sum('comments');
+  const inter = views? ((likes+favs+cmts)/views*100).toFixed(1) : '—';
+  const best = withData.slice().sort((a,b)=>(b.stats.likes+b.stats.favs+b.stats.comments)/Math.max(1,b.stats.views)-(a.stats.likes+a.stats.favs+a.stats.comments)/Math.max(1,a.stats.views))[0];
+  const kpis = `<div class="kpis">
+    <div class="kpi"><div class="v">${views? views.toLocaleString():'—'}</div><div class="t">总浏览（${withData.length} 篇有数据）</div></div>
+    <div class="kpi"><div class="v acc">${likes? likes.toLocaleString():'—'}</div><div class="t">总点赞</div></div>
+    <div class="kpi"><div class="v ok">${favs? favs.toLocaleString():'—'}</div><div class="t">总收藏</div></div>
+    <div class="kpi"><div class="v warn">${inter}</div><div class="t">平均互动率 %（及格 3%，优秀 8%）</div></div>
+  </div>`;
+  return kpis + `
+  <div class="card"><div class="card-h">🏆 表现最佳</div><div class="card-b">
+    ${best? `<div class="idea"><span class="txt"><b>${esc(best.title)}</b><br>
+      <span style="color:var(--muted);font-size:12px">互动率 ${((best.stats.likes+best.stats.favs+best.stats.comments)/Math.max(1,best.stats.views)*100).toFixed(1)}% · ${esc(best.niche)} · ${esc(best.angle||'')}</span></span></div>`
+    : '<div class="empty">发布并录入数据后揭晓</div>'}
+  </div></div>
+  <div class="card"><div class="card-h">📊 已发布明细 <span class="more" onclick="fillDemoStats()">填入演示数据</span></div><div class="card-b" style="overflow-x:auto">
+    ${done.length? `<table><thead><tr><th>标题</th><th>赛道</th><th>发布日</th><th>浏览</th><th>点赞</th><th>收藏</th><th>评论</th><th>互动率</th><th></th></tr></thead><tbody>
+    ${done.map(t=>{ const s=t.stats||{views:0,likes:0,favs:0,comments:0};
+      const r = s.views? (s.likes+s.favs+s.comments)/s.views*100 : 0;
+      return `<tr><td style="max-width:220px">${esc(t.title)||'(未命名)'}</td><td>${esc(t.niche||'-')}</td><td>${t.publishDate||'-'}</td>
+      <td class="num">${s.views||'-'}</td><td class="num">${s.likes||'-'}</td><td class="num">${s.favs||'-'}</td><td class="num">${s.comments||'-'}</td>
+      <td>${s.views? `<span style="color:${r>=8?'var(--ok)':r>=3?'var(--warn)':'var(--bad)'};font-weight:700">${r.toFixed(1)}%</span>`:'-'}</td>
+      <td><a class="link" onclick="openStatsModal('${t.id}')">录入</a></td></tr>`;}).join('')}
+    </tbody></table>` : '<div class="empty">还没有已发布内容</div>'}
+  </div></div>
+  ${nicheRankCard()}`;
+}
+function nicheRankCard(){
+  return `<div class="card"><div class="card-h">🧭 赛道复盘（该多写什么）</div><div class="card-b">${nicheRank()}
+  <div style="font-size:12px;color:var(--muted);margin-top:8px">互动率 ≥3% 及格、≥8% 优秀；表现最好的赛道，下个月排期占比翻倍。</div></div></div>`;
+}
+function openStatsModal(id){
+  const t = topicById(id); const s = t.stats||{};
+  openModal('录入数据：'+(t.title||'(未命名)'), `
+    <div class="grid4">
+      <div><label class="fl">浏览</label><input id="stV" type="number" value="${s.views||''}" style="width:100%"></div>
+      <div><label class="fl">点赞</label><input id="stL" type="number" value="${s.likes||''}" style="width:100%"></div>
+      <div><label class="fl">收藏</label><input id="stF" type="number" value="${s.favs||''}" style="width:100%"></div>
+      <div><label class="fl">评论</label><input id="stC" type="number" value="${s.comments||''}" style="width:100%"></div>
+    </div>
+    <label class="fl">发布日</label><input id="stD" type="date" value="${t.publishDate||todayStr()}">`,
+    ()=>{ updTopic(id,{stats:{views:+document.getElementById('stV').value||0, likes:+document.getElementById('stL').value||0,
+        favs:+document.getElementById('stF').value||0, comments:+document.getElementById('stC').value||0},
+        publishDate:document.getElementById('stD').value, stage:'done'});
+      closeModal(); toast('数据已记录'); CUR==='review'? render(): go('review'); }, '保存');
+}
+function fillDemoStats(){
+  const done = topics('done');
+  if(!done.length){ // 造 3 篇演示
+    [['新手搬家收纳 8 件套，租房党直接抄','家居收纳','保姆级教程',8600,412,236,45],
+     ['月瘦 4 斤的三餐公式，不挨饿','健康运动','保姆级教程',5400,301,180,33],
+     ['第一份工作最该看清的 5 件事','职场成长','避坑清单',12000,890,410,120]].forEach(a=>{
+      (DB.topics=DB.topics||[]).push(newTopicObj({title:a[0],niche:a[1],angle:a[2],stage:'done',
+        publishDate:todayStr(),stats:{views:a[3],likes:a[4],favs:a[5],comments:a[6]}})); });
+  } else {
+    done.forEach(t=>{ if(!t.stats) t.stats={views:3000+Math.floor(Math.random()*8000),
+      likes:120+Math.floor(Math.random()*400), favs:80+Math.floor(Math.random()*300), comments:10+Math.floor(Math.random()*60)}; });
+  }
+  save(); render(); toast('演示数据已填入');
+}
+
+/* ============ 6. 内容日历 ============ */
+function vCalendar(){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth();
+  const first = new Date(y,m,1), start = first.getDay()||7;
+  const days = new Date(y,m+1,0).getDate();
+  const topicsByDate = {};
+  (DB.topics||[]).forEach(t=>{ if(t.publishDate) (topicsByDate[t.publishDate]=topicsByDate[t.publishDate]||[]).push(t); });
+  let cells='';
+  for(let i=1;i<start;i++) cells+='<div class="day" style="opacity:.35"></div>';
+  const today = todayStr();
+  for(let d=1;d<=days;d++){
+    const ds = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const evs = topicsByDate[ds]||[];
+    cells += `<div class="day ${ds===today?'today':''}"><div class="d">${d}日</div>
+      ${evs.map(t=>`<div class="ev" onclick="editTopic('${t.id}')">${STAGES.find(s=>s.k===t.stage).n.slice(0,1)} ${esc((t.title||'(未命名)').slice(0,9))}</div>`).join('')}
+      <div class="ev" style="background:#efeae0;color:var(--muted)" onclick="quickSchedule('${ds}')">＋</div></div>`;
+  }
+  const unsched = (DB.topics||[]).filter(t=>!t.publishDate&&t.stage!=='done');
+  return `<div class="card"><div class="card-h">🗓️ ${y} 年 ${m+1} 月内容日历 <span style="margin-left:8px;font-weight:400;font-size:12px;color:var(--muted)">点日期里的「＋」把选题排上来</span></div>
+    <div class="card-b"><div class="cal">
+      ${['一','二','三','四','五','六','日'].map(w=>`<div style="text-align:center;color:var(--muted);font-size:12px">${w}</div>`).join('')}
+      ${cells}</div></div></div>
+  <div class="card"><div class="card-h">📥 未排期选题（${unsched.length}）<span class="more" onclick="autoSchedule()">智能排期到本周 »</span></div><div class="card-b">
+    ${unsched.length? unsched.slice(0,8).map(t=>`<div class="idea"><span class="prio-dot ${prioOf(t).level}"></span>
+      <span class="txt">${esc(t.title)||'(未命名)'} <span style="font-size:11px;color:var(--muted)">· ${esc(t.niche)}</span></span>
+      <button class="btn ghost small" onclick="quickSchedule(null,'${t.id}')">排期</button></div>`).join('')
+    : '<div class="empty">全部排上了，节奏很稳 👏</div>'}
+  </div></div>`;
+}
+function quickSchedule(ds, tid){
+  if(!tid){
+    const unsched = (DB.topics||[]).filter(t=>!t.publishDate&&t.stage!=='done');
+    if(!unsched.length) return toast('没有未排期的选题');
+    openModal('排期到 '+ds, `<label class="fl">选择选题</label><select id="qsT" style="width:100%">
+      ${unsched.map(t=>`<option value="${t.id}">${esc(t.title)||'(未命名)'}</option>`).join('')}</select>`,
+      ()=>{ updTopic(document.getElementById('qsT').value,{publishDate:ds}); closeModal(); toast('已排期'); render(); });
+    return;
+  }
+  const t = topicById(tid);
+  openModal('发布日期', `<label class="fl">选题：${esc(t.title||'(未命名)')}</label><input id="qsD" type="date" value="${t.publishDate||ds||todayStr()}" style="width:100%">`,
+    ()=>{ updTopic(tid,{publishDate:document.getElementById('qsD').value}); closeModal(); toast('已排期'); render(); });
+}
+function autoSchedule(){
+  const unsched = (DB.topics||[]).filter(t=>!t.publishDate&&t.stage!=='done');
+  const d = new Date(); let added=0;
+  unsched.forEach(t=>{ d.setDate(d.getDate()+2); t.publishDate=todayStr().slice(0,8)+String(d.getDate()).padStart(2,'0'); added++; });
+  save(); toast(added+' 条已按隔天节奏排入'); render();
+}
+
+/* ============ 数据管理 ============ */
+function openData(){
+  openModal('💾 数据管理', `
+    <p style="color:var(--muted);font-size:13px;margin-bottom:12px">全部数据保存在本机浏览器（localStorage），不上传云端。共 ${(DB.topics||[]).length} 条选题。</p>
+    <button class="btn" onclick="exportData()">📤 导出备份 JSON</button>
+    <button class="btn ghost" style="margin-left:8px" onclick="document.getElementById('impF').click()">📥 导入备份</button>
+    <input type="file" id="impF" accept=".json" style="display:none" onchange="importData(this)">
+    <button class="btn ghost" style="margin-left:8px" onclick="seedDemo(true)">🔄 重置演示数据</button>`, null);
+}
+function exportData(){
+  const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download='feiwen-backup-'+todayStr()+'.json'; a.click();
+}
+function importData(inp){
+  const f=inp.files[0]; if(!f) return;
+  const r=new FileReader(); r.onload=()=>{ try{ DB=JSON.parse(r.result); save(); closeModal(); toast('导入成功'); render(); }catch(e){ toast('文件格式错误'); } };
+  r.readAsText(f);
+}
+function seedDemo(force){
+  if(!force && DB.topics) { closeModal(); return; }
+  DB={topics:[]};
+  const D=o=>{ const d=new Date(); d.setDate(d.getDate()+o); return d.toISOString().slice(0,10); };
+  [['租房党收纳神器 TOP8，搬家再也不哭','家居收纳','保姆级教程','todo',D(3)],
+   ['月瘦 4 斤的三餐公式（不挨饿版）','健康运动','保姆级教程','writing',D(5)],
+   ['被裁后我靠这 3 个副业缓过来了','职场成长','情绪共鸣','ready',D(2)],
+   ['大学生第一台相机的避坑清单','数码好物','避坑清单','idea',''],
+   ['带娃周末去哪？本地遛娃地图','育儿家庭','新手入门','idea',''],
+  ].forEach(a=>{ DB.topics.push(newTopicObj({title:a[0],niche:a[1],angle:a[2],stage:a[3],publishDate:a[4]})); });
+  DB.topics.push(newTopicObj({title:'出租屋改造 500 元封顶实录',niche:'家居收纳',angle:'真实测评',stage:'done',
+    publishDate:D(-6),stats:{views:9800,likes:560,favs:320,comments:48}}));
+  DB.topics.push(newTopicObj({title:'通勤路上能做的 5 件小事',niche:'职场成长',angle:'效率工具',stage:'done',
+    publishDate:D(-13),stats:{views:4200,likes:210,favs:150,comments:18}}));
+  save(); closeModal(); toast('演示数据已就绪'); render();
+}
+
+/* ---------------- 启动 ---------------- */
+renderTabs();
+if(!DB.topics) seedDemo(false);
+render();
+</script>
+</body>
+</html>
